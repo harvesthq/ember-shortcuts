@@ -67,8 +67,19 @@
     return true;
   }
 
-  function makeKeyDownDispatch(router, filters) {
-    function triggerKeyDownShortcut(def, event) {
+  function triggerEvent(filters, event, kc, callback) {
+    if (!ENABLED) return;
+    if (!filter(filters, event)) return;
+    if (!(kc in SHORTCUTS)) return;
+
+    forEach(SHORTCUTS[kc], def => {
+      if (!modsMatch(def)) return;
+      Ember.run(() => { callback(def, event); });
+    });
+  }
+
+  function makeTriggerShortcut(router, callback) {
+    return function triggerShortcut(def, event) {
       let actionOrObject, handler, infos;
 
       if (!(infos = router.currentHandlerInfos)) return;
@@ -77,70 +88,49 @@
         const handler = infos[i].handler;
 
         if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
-          if (typeof actionOrObject === 'string') {
-            handler.send(actionOrObject, event);
-          } else {
-            handler.send(actionOrObject.keyDown, event);
-          }
-          return;
+          return callback(handler, actionOrObject);
         }
       }
     }
+  }
+
+  function makeKeyDownDispatch(router, filters) {
+    const triggerKeyDownShortcut = makeTriggerShortcut(router, (handler, actionOrObject) => {
+      if (typeof actionOrObject === 'string') {
+        handler.send(actionOrObject, event);
+      } else {
+        handler.send(actionOrObject.keyDown, event);
+      }
+    })
 
     return function dispatchKeyDownShortcut(event) {
       const kc = normalize(event.keyCode);
 
       PRESSED[kc] = true;
-
       if (isMod(kc)) {
         PRESSED_MODS[kc] = true;
         return;
       }
 
       updatePressedMods(event, kc);
-
-      if (!ENABLED) return;
-      if (!filter(filters, event)) return;
-      if (!(kc in SHORTCUTS)) return;
-
-      forEach(SHORTCUTS[kc], def => {
-        if (!modsMatch(def)) return;
-        Ember.run(() => { triggerKeyDownShortcut(def, event); });
-      });
+      triggerEvent(filters, event, kc, triggerKeyDownShortcut);
     };
   }
 
   function makeKeyUpDispatch(router, filters) {
-    function triggerKeyUpShortcut(def, event) {
-      let actionOrObject, handler, infos;
-
-      if (!(infos = router.currentHandlerInfos)) return;
-
-      for (let i = infos.length - 1; i >= 0; i--) {
-        const handler = infos[i].handler;
-
-        if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
-          if (typeof actionOrObject === 'object') {
-            handler.send(actionOrObject.keyUp, event);
-          }
-          return;
-        }
+    const triggerKeyUpShortcut = makeTriggerShortcut(router, (handler, actionOrObject) => {
+      if (typeof actionOrObject === 'object') {
+        handler.send(actionOrObject.keyUp, event);
       }
-    }
+    })
 
     return function dispatchKeyUpShortcut(event) {
       const kc = normalize(event.keyCode);
+
       if (PRESSED[kc]) PRESSED[kc] = undefined;
       if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
 
-      if (!ENABLED) return;
-      if (!filter(filters, event)) return;
-      if (!(kc in SHORTCUTS)) return;
-
-      forEach(SHORTCUTS[kc], def => {
-        if (!modsMatch(def)) return;
-        Ember.run(() => { triggerKeyUpShortcut(def, event); });
-      });
+      triggerEvent(filters, event, kc, triggerKeyUpShortcut);
     };
   }
 
