@@ -60,31 +60,35 @@
     }
   }
 
-  function makeDispatch(router, filters) {
-    function triggerShortcut(def, event) {
-      var i, action, handler, infos;
+  function filter(filters, event) {
+    for (var i = 0; i < filters.length; i++) {
+      if (!filters[i](event)) return false;
+    }
+    return true;
+  }
+
+  function makeKeyDownDispatch(router, filters) {
+    function triggerKeyDownShortcut(def, event) {
+      let actionOrObject, handler, infos;
 
       if (!(infos = router.currentHandlerInfos)) return;
 
-      for (i = infos.length - 1; i >= 0; i--) {
-        handler = infos[i].handler;
+      for (let i = infos.length - 1; i >= 0; i--) {
+        const handler = infos[i].handler;
 
-        if (handler.shortcuts && (action = handler.shortcuts[def.raw])) {
-          handler.send(action, event);
+        if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
+          if (typeof actionOrObject === 'string') {
+            handler.send(actionOrObject, event);
+          } else {
+            handler.send(actionOrObject.keyDown, event);
+          }
           return;
         }
       }
     }
 
-    function filter(event) {
-      for (var i = 0; i < filters.length; i++) {
-        if (!filters[i](event)) return false;
-      }
-      return true;
-    }
-
-    return function dispatchShortcut(event) {
-      var kc = normalize(event.keyCode);
+    return function dispatchKeyDownShortcut(event) {
+      const kc = normalize(event.keyCode);
 
       PRESSED[kc] = true;
 
@@ -96,20 +100,48 @@
       updatePressedMods(event, kc);
 
       if (!ENABLED) return;
-      if (!filter(event)) return;
+      if (!filter(filters, event)) return;
       if (!(kc in SHORTCUTS)) return;
 
-      forEach(SHORTCUTS[kc], function(def) {
+      forEach(SHORTCUTS[kc], def => {
         if (!modsMatch(def)) return;
-        Ember.run(function() { triggerShortcut(def, event); });
+        Ember.run(() => { triggerKeyDownShortcut(def, event); });
       });
     };
   }
 
-  function clear(event) {
-    var kc = normalize(event.keyCode);
-    if (PRESSED[kc]) PRESSED[kc] = undefined;
-    if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
+  function makeKeyUpDispatch(router, filters) {
+    function triggerKeyUpShortcut(def, event) {
+      let actionOrObject, handler, infos;
+
+      if (!(infos = router.currentHandlerInfos)) return;
+
+      for (let i = infos.length - 1; i >= 0; i--) {
+        const handler = infos[i].handler;
+
+        if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
+          if (typeof actionOrObject === 'object') {
+            handler.send(actionOrObject.keyUp, event);
+          }
+          return;
+        }
+      }
+    }
+
+    return function dispatchKeyUpShortcut(event) {
+      const kc = normalize(event.keyCode);
+      if (PRESSED[kc]) PRESSED[kc] = undefined;
+      if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
+
+      if (!ENABLED) return;
+      if (!filter(filters, event)) return;
+      if (!(kc in SHORTCUTS)) return;
+
+      forEach(SHORTCUTS[kc], def => {
+        if (!modsMatch(def)) return;
+        Ember.run(() => { triggerKeyUpShortcut(def, event); });
+      });
+    };
   }
 
   function reset() {
@@ -159,15 +191,16 @@
     filters: [targetIsNotInput],
 
     init: function() {
-      var router = this.get('router');
-      var filters = this.get('filters');
-      var dispatch = makeDispatch(router, filters);
+      const router = this.get('router');
+      const filters = this.get('filters');
 
-      $doc.on('keydown.ember-shortcuts', dispatch);
-      $doc.on('keyup.ember-shortcuts', clear);
+      const keyDownDispatch = makeKeyDownDispatch(router, filters);
+      const keyUpDispatch = makeKeyUpDispatch(router, filters);
+
+      $doc.on('keydown.ember-shortcuts', keyDownDispatch);
+      $doc.on('keyup.ember-shortcuts', keyUpDispatch);
       $win.on('focus.ember-shortcuts', reset);
       this.enable();
-
     },
 
     router: Ember.computed(function() {
@@ -204,6 +237,7 @@
         application.register('shortcuts:main', Ember.Shortcuts);
         application.inject('route', 'shortcuts', 'shortcuts:main');
         application.inject('controller', 'shortcuts', 'shortcuts:main');
+        application.inject('component', 'shortcuts', 'shortcuts:main');
       }
     });
   });
