@@ -40,6 +40,30 @@ above, if a child of that route defined a `shift+a: 'otherAction'` handler and
 was active when the shortcut was pressed, the action `otherAction` would get
 sent instead of `someAction`.
 
+### KeyDown/KeyUp
+
+Passing in an object rather than a string enables listening for keydown and
+key up events separately.
+
+In any route:
+
+```
+Ember.Route.Extend({
+  shortcuts: {
+    'shift+a': { keyDown: 'triggeredOnKeyDown', keyUp: 'triggeredOnKeyUp' },
+  },
+
+  actions: {
+    triggeredOnKeyDown: function() {
+      console.log('keyDown!');
+    },
+    triggeredOnKeyUp: function() {
+      console.log('keyUp!');
+    },
+  }
+});
+```
+
 ## Injection
 
 Ember.Shortcuts, once includes, is available to you as an injected singleton on
