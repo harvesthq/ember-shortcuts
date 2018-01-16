@@ -26,7 +26,7 @@
   for (var n = 1; n < 20; n++) DEFINITIONS['f'+n] = 111 + n;
 
   function code(c) {
-    return DEFINITIONS[c] || c.toUpperCase().charCodeAt(0);
+    return DEFINITIONS[c] || MODIFIERS[c] || c.toUpperCase().charCodeAt(0);
   }
 
   var ENABLED = true;
@@ -73,7 +73,7 @@
     if (!(kc in SHORTCUTS)) return;
 
     forEach(SHORTCUTS[kc], def => {
-      if (!modsMatch(def)) return;
+      if (!isMod(kc) && !modsMatch(def)) return;
       Ember.run(() => { callback(def, event); });
     });
   }
@@ -109,7 +109,6 @@
       PRESSED[kc] = true;
       if (isMod(kc)) {
         PRESSED_MODS[kc] = true;
-        return;
       }
 
       updatePressedMods(event, kc);
