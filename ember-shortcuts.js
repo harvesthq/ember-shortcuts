@@ -215,7 +215,9 @@
   Ember.Route.reopen({
     mergedProperties: ['shortcuts'],
     registerShortcuts: function() {
-      if (this.shortcuts) register(objectKeys(this.shortcuts));
+      if (this.shortcuts && objectKeys(this.shortcuts).length) {
+        register(objectKeys(this.shortcuts));
+      }
     }.on('init')
   });
 
