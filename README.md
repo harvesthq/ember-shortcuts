@@ -18,7 +18,7 @@ Include it on your page somewhere after `ember.js`.
 
 In any route:
 
-```
+```javascript
 Ember.Route.Extend({
   shortcuts: {
     'shift+a': 'someAction'
@@ -47,7 +47,7 @@ key up events separately.
 
 In any route:
 
-```
+```javascript
 Ember.Route.Extend({
   shortcuts: {
     'shift+a': { keyDown: 'triggeredOnKeyDown', keyUp: 'triggeredOnKeyUp' },
@@ -67,7 +67,7 @@ Ember.Route.Extend({
 ## Injection
 
 Ember.Shortcuts, once includes, is available to you as an injected singleton on
-your controllers and routes as the `shortcuts` property.
+your controllers, components and routes as the `shortcuts` property.
 
 **`this.shortcuts.disable`**
 **`this.shortcuts.enable`**
@@ -75,3 +75,27 @@ your controllers and routes as the `shortcuts` property.
 Call this to toggle whether or not the global keyboard shortcut handlers will
 fire.
 
+## Filters
+
+Before any event is triggered `this.shortcuts.filters` is checked to determine
+if the event will fire. 
+
+By default, ember-shortcuts checks the event target isn't an input, select or 
+text area.
+
+Modify `this.shortcuts.filters` to add extra filters, for example:
+
+```javascript
+function modalIsNotOpen() {
+  return !Ember.$('.modal)').length;
+}
+
+function targetIsNotInput(event) {
+  const tagName = event.target.tagName;
+  return (tagName !== 'INPUT') && (tagName !== 'SELECT') && (tagName !== 'TEXTAREA');
+}
+
+Ember.Shortcuts.reopen({
+  filters: [modalIsNotOpen, targetIsNotInput]
+});
+```
