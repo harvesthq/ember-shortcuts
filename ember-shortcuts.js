@@ -72,39 +72,39 @@
     if (!filter(filters, event)) return;
     if (!(kc in SHORTCUTS)) return;
 
-    forEach(SHORTCUTS[kc], def => {
+    forEach(SHORTCUTS[kc], function(def) {
       if (!isMod(kc) && !modsMatch(def)) return;
-      Ember.run(() => { callback(def, event); });
+      Ember.run(function() { callback(def, event); });
     });
   }
 
   function makeTriggerShortcut(router, callback) {
     return function triggerShortcut(def, event) {
-      let actionOrObject, handler, infos;
+      var actionOrObject, infos;
 
       if (!(infos = router.currentHandlerInfos)) return;
 
-      for (let i = infos.length - 1; i >= 0; i--) {
-        const handler = infos[i].handler;
+      for (var i = infos.length - 1; i >= 0; i--) {
+        var handler = infos[i].handler;
 
         if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
           return callback(handler, actionOrObject);
         }
       }
-    }
+    };
   }
 
   function makeKeyDownDispatch(router, filters) {
-    const triggerKeyDownShortcut = makeTriggerShortcut(router, (handler, actionOrObject) => {
+    var triggerKeyDownShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
       if (typeof actionOrObject === 'string') {
         handler.send(actionOrObject, event);
       } else {
         handler.send(actionOrObject.keyDown, event);
       }
-    })
+    });
 
     return function dispatchKeyDownShortcut(event) {
-      const kc = normalize(event.keyCode);
+      var kc = normalize(event.keyCode);
 
       PRESSED[kc] = true;
       if (isMod(kc)) {
@@ -117,14 +117,14 @@
   }
 
   function makeKeyUpDispatch(router, filters) {
-    const triggerKeyUpShortcut = makeTriggerShortcut(router, (handler, actionOrObject) => {
+    var triggerKeyUpShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
       if (typeof actionOrObject === 'object') {
         handler.send(actionOrObject.keyUp, event);
       }
-    })
+    });
 
     return function dispatchKeyUpShortcut(event) {
-      const kc = normalize(event.keyCode);
+      var kc = normalize(event.keyCode);
 
       if (PRESSED[kc]) PRESSED[kc] = undefined;
       if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
@@ -150,7 +150,7 @@
     var m, mods = {};
 
     forEach(parts, function(part) {
-      if ((m = MODIFIERS[part])) mods[m] = true;
+      if (m = MODIFIERS[part]) mods[m] = true;
     });
 
     return { mods: mods, kc: kc, raw: spec };
@@ -180,11 +180,11 @@
     filters: [targetIsNotInput],
 
     init: function() {
-      const router = this.get('router');
-      const filters = this.get('filters');
+      var router = this.get('router');
+      var filters = this.get('filters');
 
-      const keyDownDispatch = makeKeyDownDispatch(router, filters);
-      const keyUpDispatch = makeKeyUpDispatch(router, filters);
+      var keyDownDispatch = makeKeyDownDispatch(router, filters);
+      var keyUpDispatch = makeKeyUpDispatch(router, filters);
 
       $doc.on('keydown.ember-shortcuts', keyDownDispatch);
       $doc.on('keyup.ember-shortcuts', keyUpDispatch);
@@ -232,4 +232,4 @@
       }
     });
   });
-}(Ember, Ember.$));
+})(Ember, Ember.$);
