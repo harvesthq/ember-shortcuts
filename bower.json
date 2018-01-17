@@ -1,7 +1,7 @@
 {
   "name": "ember-shortcuts",
   "main": "ember-shortcuts.js",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "authors": [
     "Arun Srinivasan <rulfzid@gmail.com>"
   ],
