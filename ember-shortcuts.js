@@ -194,9 +194,10 @@
 
     router: Ember.computed(function() {
       var path = 'router:main';
-      return Ember.getOwner
-        ? Ember.getOwner(this).lookup(path)._routerMicrolib
-        : this.container.lookup(path)._routerMicrolib;
+      var router = Ember.getOwner
+        ? Ember.getOwner(this).lookup(path)
+        : this.container.lookup(path);
+      return router._routerMicrolib || router.router; 
     }),
 
     unbind: function() {
