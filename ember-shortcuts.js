@@ -72,14 +72,14 @@
     if (!filter(filters, event)) return;
     if (!(keyCode in SHORTCUTS)) return;
 
-    forEach(SHORTCUTS[keyCode], function(def) {
-      if (!isMod(keyCode) && !modsMatch(def)) return;
-      Ember.run(function() { callback(def, event); });
+    forEach(SHORTCUTS[keyCode], function(parsedKeyBinding) {
+      if (!isMod(keyCode) && !modsMatch(parsedKeyBinding)) return;
+      Ember.run(function() { callback(parsedKeyBinding, event); });
     });
   }
 
   function makeTriggerShortcut(router, callback) {
-    return function triggerShortcut(def, event) {
+    return function triggerShortcut(parsedKeyBinding, event) {
       var actionOrObject, infos;
 
       if (!(infos = router.currentHandlerInfos)) return;
@@ -87,7 +87,7 @@
       for (var i = infos.length - 1; i >= 0; i--) {
         var handler = infos[i].handler;
 
-        if (handler.shortcuts && (actionOrObject = handler.shortcuts[def.raw])) {
+        if (handler.shortcuts && (actionOrObject = handler.shortcuts[parsedKeyBinding.raw])) {
           return callback(handler, actionOrObject);
         }
       }
@@ -138,8 +138,8 @@
     PRESSED_MODS = {};
   }
 
-  function modsMatch(def) {
-    var mods = def.mods;
+  function modsMatch(parsedKeyBinding) {
+    var mods = parsedKeyBinding.mods;
     return mods[16] === PRESSED_MODS[16] && mods[17] === PRESSED_MODS[17] &&
            mods[18] === PRESSED_MODS[18] && mods[91] === PRESSED_MODS[91];
   }
@@ -158,9 +158,9 @@
 
   function register(shortcuts) {
     forEach(shortcuts, function(spec) {
-      var def = parse(spec);
-      if (!(def.keyCode in SHORTCUTS)) SHORTCUTS[def.keyCode] = [];
-      SHORTCUTS[def.keyCode].push(def);
+      var parsedKeyBinding = parse(spec);
+      if (!(parsedKeyBinding.keyCode in SHORTCUTS)) SHORTCUTS[parsedKeyBinding.keyCode] = [];
+      SHORTCUTS[parsedKeyBinding.keyCode].push(parsedKeyBinding);
     });
   }
 
