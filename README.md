@@ -19,7 +19,7 @@ Include it on your page somewhere after `ember.js`.
 In any route:
 
 ```javascript
-Ember.Route.Extend({
+Ember.Route.extend({
   shortcuts: {
     'shift+a': 'someAction'
   },
@@ -48,7 +48,7 @@ key up events separately.
 In any route:
 
 ```javascript
-Ember.Route.Extend({
+Ember.Route.extend({
   shortcuts: {
     'shift+a': { keyDown: 'triggeredOnKeyDown', keyUp: 'triggeredOnKeyUp' },
   },
@@ -87,7 +87,7 @@ Modify `this.shortcuts.filters` to add extra filters, for example:
 
 ```javascript
 function modalIsNotOpen() {
-  return !Ember.$('.modal)').length;
+  return !Ember.$('.modal').length;
 }
 
 function targetIsNotInput(event) {
