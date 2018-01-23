@@ -34,20 +34,20 @@
   var PRESSED_MODS = {};
   var SHORTCUTS = {};
 
-  function normalize(kc) {
-    switch (kc) {
+  function normalize(keyCode) {
+    switch (keyCode) {
       case 93: case 224: return 91; // Firefox does ⌘  weird
       case 61: return 187;          // and `=`
       case 173: return 189;         // and `-`
-      default: return kc;
+      default: return keyCode;
     }
   }
 
-  function isMod(kc) {
-    return kc === 16 || kc === 17 || kc === 18 || kc === 91;
+  function isMod(keyCode) {
+    return keyCode === 16 || keyCode === 17 || keyCode === 18 || keyCode === 91;
   }
 
-  function updatePressedMods(event, kc) {
+  function updatePressedMods(event, keyCode) {
     if (event.shiftKey) PRESSED_MODS[16] = true;
     if (event.ctrlKey)  PRESSED_MODS[17] = true;
     if (event.altKey)   PRESSED_MODS[18] = true;
@@ -67,13 +67,13 @@
     return true;
   }
 
-  function triggerEvent(filters, event, kc, callback) {
+  function triggerEvent(filters, event, keyCode, callback) {
     if (!ENABLED) return;
     if (!filter(filters, event)) return;
-    if (!(kc in SHORTCUTS)) return;
+    if (!(keyCode in SHORTCUTS)) return;
 
-    forEach(SHORTCUTS[kc], function(def) {
-      if (!isMod(kc) && !modsMatch(def)) return;
+    forEach(SHORTCUTS[keyCode], function(def) {
+      if (!isMod(keyCode) && !modsMatch(def)) return;
       Ember.run(function() { callback(def, event); });
     });
   }
@@ -104,15 +104,15 @@
     });
 
     return function dispatchKeyDownShortcut(event) {
-      var kc = normalize(event.keyCode);
+      var keyCode = normalize(event.keyCode);
 
-      PRESSED[kc] = true;
-      if (isMod(kc)) {
-        PRESSED_MODS[kc] = true;
+      PRESSED[keyCode] = true;
+      if (isMod(keyCode)) {
+        PRESSED_MODS[keyCode] = true;
       }
 
-      updatePressedMods(event, kc);
-      triggerEvent(filters, event, kc, triggerKeyDownShortcut);
+      updatePressedMods(event, keyCode);
+      triggerEvent(filters, event, keyCode, triggerKeyDownShortcut);
     };
   }
 
@@ -124,12 +124,12 @@
     });
 
     return function dispatchKeyUpShortcut(event) {
-      var kc = normalize(event.keyCode);
+      var keyCode = normalize(event.keyCode);
 
-      if (PRESSED[kc]) PRESSED[kc] = undefined;
-      if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
+      if (PRESSED[keyCode]) PRESSED[keyCode] = undefined;
+      if (PRESSED_MODS[keyCode]) PRESSED_MODS[keyCode] = undefined;
 
-      triggerEvent(filters, event, kc, triggerKeyUpShortcut);
+      triggerEvent(filters, event, keyCode, triggerKeyUpShortcut);
     };
   }
 
@@ -146,21 +146,21 @@
 
   function parse(spec) {
     var parts = spec.replace(/\s+/g, '').split('+');
-    var kc = code(parts.pop());
+    var keyCode = code(parts.pop());
     var m, mods = {};
 
     forEach(parts, function(part) {
       if (m = MODIFIERS[part]) mods[m] = true;
     });
 
-    return { mods: mods, kc: kc, raw: spec };
+    return { mods: mods, keyCode: keyCode, raw: spec };
   }
 
   function register(shortcuts) {
     forEach(shortcuts, function(spec) {
       var def = parse(spec);
-      if (!(def.kc in SHORTCUTS)) SHORTCUTS[def.kc] = [];
-      SHORTCUTS[def.kc].push(def);
+      if (!(def.keyCode in SHORTCUTS)) SHORTCUTS[def.keyCode] = [];
+      SHORTCUTS[def.keyCode].push(def);
     });
   }
 
