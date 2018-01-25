@@ -54,17 +54,10 @@
     if (event.metaKey)  PRESSED_MODS[91] = true;
   }
 
-  function forEach(array, fn) {
-    for (var i = 0, len = array.length; i < len; i++) {
-      fn(array[i]);
-    }
-  }
-
   function filter(filters, event) {
-    for (var i = 0; i < filters.length; i++) {
-      if (!filters[i](event)) return false;
-    }
-    return true;
+    return !filters.any(function(filter) {
+      return !filter(event);
+    });
   }
 
   function triggerEvent(filters, event, keyCode, callback) {
@@ -72,7 +65,7 @@
     if (!filter(filters, event)) return;
     if (!(keyCode in SHORTCUTS)) return;
 
-    forEach(SHORTCUTS[keyCode], function(parsedKeyBinding) {
+    SHORTCUTS[keyCode].forEach(function(parsedKeyBinding) {
       if (!isMod(keyCode) && !modsMatch(parsedKeyBinding)) return;
       Ember.run(function() { callback(parsedKeyBinding, event); });
     });
@@ -149,7 +142,7 @@
     var keyCode = code(parts.pop());
     var m, mods = {};
 
-    forEach(parts, function(part) {
+    parts.forEach(function(part) {
       if (m = MODIFIERS[part]) mods[m] = true;
     });
 
@@ -157,7 +150,7 @@
   }
 
   function register(shortcuts) {
-    forEach(shortcuts, function(spec) {
+    shortcuts.forEach(function(spec) {
       var parsedKeyBinding = parse(spec);
       if (!(parsedKeyBinding.keyCode in SHORTCUTS)) SHORTCUTS[parsedKeyBinding.keyCode] = [];
       SHORTCUTS[parsedKeyBinding.keyCode].push(parsedKeyBinding);
