@@ -26,7 +26,7 @@
   for (var n = 1; n < 20; n++) DEFINITIONS['f'+n] = 111 + n;
 
   function code(c) {
-    return DEFINITIONS[c] || c.toUpperCase().charCodeAt(0);
+    return DEFINITIONS[c] || MODIFIERS[c] || c.toUpperCase().charCodeAt(0);
   }
 
   var ENABLED = true;
@@ -34,82 +34,96 @@
   var PRESSED_MODS = {};
   var SHORTCUTS = {};
 
-  function normalize(kc) {
-    switch (kc) {
+  function normalize(keyCode) {
+    switch (keyCode) {
       case 93: case 224: return 91; // Firefox does ⌘  weird
       case 61: return 187;          // and `=`
       case 173: return 189;         // and `-`
-      default: return kc;
+      default: return keyCode;
     }
   }
 
-  function isMod(kc) {
-    return kc === 16 || kc === 17 || kc === 18 || kc === 91;
+  function isMod(keyCode) {
+    return keyCode === 16 || keyCode === 17 || keyCode === 18 || keyCode === 91;
   }
 
-  function updatePressedMods(event, kc) {
+  function updatePressedMods(event, keyCode) {
     if (event.shiftKey) PRESSED_MODS[16] = true;
     if (event.ctrlKey)  PRESSED_MODS[17] = true;
     if (event.altKey)   PRESSED_MODS[18] = true;
     if (event.metaKey)  PRESSED_MODS[91] = true;
   }
 
-  function forEach(array, fn) {
-    for (var i = 0, len = array.length; i < len; i++) {
-      fn(array[i]);
-    }
+  function filter(filters, event) {
+    return !filters.any(function(filter) {
+      return !filter(event);
+    });
   }
 
-  function makeDispatch(router, filters) {
-    function triggerShortcut(def, event) {
-      var i, action, handler, infos;
+  function triggerEvent(filters, event, keyCode, callback) {
+    if (!ENABLED) return;
+    if (!filter(filters, event)) return;
+    if (!(keyCode in SHORTCUTS)) return;
+
+    SHORTCUTS[keyCode].forEach(function(parsedKeyBinding) {
+      if (!isMod(keyCode) && !modsMatch(parsedKeyBinding)) return;
+      Ember.run(function() { callback(parsedKeyBinding, event); });
+    });
+  }
+
+  function makeTriggerShortcut(router, callback) {
+    return function triggerShortcut(parsedKeyBinding, event) {
+      var actionOrObject, infos;
 
       if (!(infos = router.currentHandlerInfos)) return;
 
-      for (i = infos.length - 1; i >= 0; i--) {
-        handler = infos[i].handler;
+      for (var i = infos.length - 1; i >= 0; i--) {
+        var handler = infos[i].handler;
 
-        if (handler.shortcuts && (action = handler.shortcuts[def.raw])) {
-          handler.send(action, event);
-          return;
+        if (handler.shortcuts && (actionOrObject = handler.shortcuts[parsedKeyBinding.raw])) {
+          return callback(handler, actionOrObject);
         }
       }
-    }
-
-    function filter(event) {
-      for (var i = 0; i < filters.length; i++) {
-        if (!filters[i](event)) return false;
-      }
-      return true;
-    }
-
-    return function dispatchShortcut(event) {
-      var kc = normalize(event.keyCode);
-
-      PRESSED[kc] = true;
-
-      if (isMod(kc)) {
-        PRESSED_MODS[kc] = true;
-        return;
-      }
-
-      updatePressedMods(event, kc);
-
-      if (!ENABLED) return;
-      if (!filter(event)) return;
-      if (!(kc in SHORTCUTS)) return;
-
-      forEach(SHORTCUTS[kc], function(def) {
-        if (!modsMatch(def)) return;
-        Ember.run(function() { triggerShortcut(def, event); });
-      });
     };
   }
 
-  function clear(event) {
-    var kc = normalize(event.keyCode);
-    if (PRESSED[kc]) PRESSED[kc] = undefined;
-    if (PRESSED_MODS[kc]) PRESSED_MODS[kc] = undefined;
+  function makeKeyDownDispatch(router, filters) {
+    var triggerKeyDownShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
+      if (typeof actionOrObject === 'string') {
+        handler.send(actionOrObject, event);
+      } else {
+        handler.send(actionOrObject.keyDown, event);
+      }
+    });
+
+    return function dispatchKeyDownShortcut(event) {
+      var keyCode = normalize(event.keyCode);
+
+      PRESSED[keyCode] = true;
+      if (isMod(keyCode)) {
+        PRESSED_MODS[keyCode] = true;
+      }
+
+      updatePressedMods(event, keyCode);
+      triggerEvent(filters, event, keyCode, triggerKeyDownShortcut);
+    };
+  }
+
+  function makeKeyUpDispatch(router, filters) {
+    var triggerKeyUpShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
+      if (typeof actionOrObject === 'object') {
+        handler.send(actionOrObject.keyUp, event);
+      }
+    });
+
+    return function dispatchKeyUpShortcut(event) {
+      var keyCode = normalize(event.keyCode);
+
+      if (PRESSED[keyCode]) PRESSED[keyCode] = undefined;
+      if (PRESSED_MODS[keyCode]) PRESSED_MODS[keyCode] = undefined;
+
+      triggerEvent(filters, event, keyCode, triggerKeyUpShortcut);
+    };
   }
 
   function reset() {
@@ -117,29 +131,29 @@
     PRESSED_MODS = {};
   }
 
-  function modsMatch(def) {
-    var mods = def.mods;
+  function modsMatch(parsedKeyBinding) {
+    var mods = parsedKeyBinding.mods;
     return mods[16] === PRESSED_MODS[16] && mods[17] === PRESSED_MODS[17] &&
            mods[18] === PRESSED_MODS[18] && mods[91] === PRESSED_MODS[91];
   }
 
   function parse(spec) {
     var parts = spec.replace(/\s+/g, '').split('+');
-    var kc = code(parts.pop());
+    var keyCode = code(parts.pop());
     var m, mods = {};
 
-    forEach(parts, function(part) {
-      if ((m = MODIFIERS[part])) mods[m] = true;
+    parts.forEach(function(part) {
+      if (m = MODIFIERS[part]) mods[m] = true;
     });
 
-    return { mods: mods, kc: kc, raw: spec };
+    return { mods: mods, keyCode: keyCode, raw: spec };
   }
 
   function register(shortcuts) {
-    forEach(shortcuts, function(spec) {
-      var def = parse(spec);
-      if (!(def.kc in SHORTCUTS)) SHORTCUTS[def.kc] = [];
-      SHORTCUTS[def.kc].push(def);
+    shortcuts.forEach(function(spec) {
+      var parsedKeyBinding = parse(spec);
+      if (!(parsedKeyBinding.keyCode in SHORTCUTS)) SHORTCUTS[parsedKeyBinding.keyCode] = [];
+      SHORTCUTS[parsedKeyBinding.keyCode].push(parsedKeyBinding);
     });
   }
 
@@ -161,20 +175,22 @@
     init: function() {
       var router = this.get('router');
       var filters = this.get('filters');
-      var dispatch = makeDispatch(router, filters);
 
-      $doc.on('keydown.ember-shortcuts', dispatch);
-      $doc.on('keyup.ember-shortcuts', clear);
+      var keyDownDispatch = makeKeyDownDispatch(router, filters);
+      var keyUpDispatch = makeKeyUpDispatch(router, filters);
+
+      $doc.on('keydown.ember-shortcuts', keyDownDispatch);
+      $doc.on('keyup.ember-shortcuts', keyUpDispatch);
       $win.on('focus.ember-shortcuts', reset);
       this.enable();
-
     },
 
     router: Ember.computed(function() {
       var path = 'router:main';
-      return Ember.getOwner
-        ? Ember.getOwner(this).lookup(path)._routerMicrolib
-        : this.container.lookup(path)._routerMicrolib;
+      var router = Ember.getOwner
+        ? Ember.getOwner(this).lookup(path)
+        : this.container.lookup(path);
+      return router._routerMicrolib || router.router; 
     }),
 
     unbind: function() {
@@ -192,7 +208,9 @@
   Ember.Route.reopen({
     mergedProperties: ['shortcuts'],
     registerShortcuts: function() {
-      if (this.shortcuts) register(objectKeys(this.shortcuts));
+      if (this.shortcuts && objectKeys(this.shortcuts).length) {
+        register(objectKeys(this.shortcuts));
+      }
     }.on('init')
   });
 
@@ -204,7 +222,8 @@
         application.register('shortcuts:main', Ember.Shortcuts);
         application.inject('route', 'shortcuts', 'shortcuts:main');
         application.inject('controller', 'shortcuts', 'shortcuts:main');
+        application.inject('component', 'shortcuts', 'shortcuts:main');
       }
     });
   });
-}(Ember, Ember.$));
+})(Ember, Ember.$);
