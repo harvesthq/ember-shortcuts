@@ -81,14 +81,14 @@
         var handler = infos[i].handler;
 
         if (handler.shortcuts && (actionOrObject = handler.shortcuts[parsedKeyBinding.raw])) {
-          return callback(handler, actionOrObject);
+          return callback(handler, actionOrObject, event);
         }
       }
     };
   }
 
   function makeKeyDownDispatch(router, filters) {
-    var triggerKeyDownShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
+    var triggerKeyDownShortcut = makeTriggerShortcut(router, function(handler, actionOrObject, event) {
       if (typeof actionOrObject === 'string') {
         handler.send(actionOrObject, event);
       } else {
@@ -110,7 +110,7 @@
   }
 
   function makeKeyUpDispatch(router, filters) {
-    var triggerKeyUpShortcut = makeTriggerShortcut(router, function(handler, actionOrObject) {
+    var triggerKeyUpShortcut = makeTriggerShortcut(router, function(handler, actionOrObject, event) {
       if (typeof actionOrObject === 'object') {
         handler.send(actionOrObject.keyUp, event);
       }
