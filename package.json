@@ -1,0 +1,34 @@
+{
+  "name": "ember-shortcuts",
+  "version": "0.1.1",
+  "description": "Keyboard shortcuts for Ember applications",
+  "main": "ember-shortcuts.js",
+  "dependencies": {
+    "ember-cli": "^2.16.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harvesthq/ember-shortcuts.git"
+  },
+  "keywords": [
+    "Ember",
+    "keyboard",
+    "shortcuts"
+  ],
+  "contributors": [
+    "Arun Srinivasan <rulfzid@gmail.com>",
+    "Pez Cuckow <pez@getharvest.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/harvesthq/ember-shortcuts/issues"
+  },
+  "files": [
+    "ember-shortcuts.js"
+  ],
+  "homepage": "https://github.com/harvesthq/ember-shortcuts#readme"
+}
